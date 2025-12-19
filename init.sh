@@ -77,7 +77,7 @@ sleep 1s
 
 if [[ "$CHANGE_HOSTNAME" =~ ^[Yy]$ ]]; then
     echo -e "\n${RED} 主机名仅允许只允许字母、数字、下划线、短横线 ${NC}"
-    echo -ne "${YELLOW} ===> 请输入新的主机名: ${NC}"
+    echo -ne "${GREEN} ===> 请输入新的主机名: ${NC}"
     read -r NEW_HOSTNAME < /dev/tty
     if [[ -n "$NEW_HOSTNAME" ]]; then
         echo -e "\n${GREEN} ===> 正在设置... ${NC}"
@@ -190,7 +190,7 @@ sleep 1s
 
 # ===> 预定义获取服务器地区的逻辑
 function check_network_region() {
-    # 返回: "GLOBAL" 或 "CNMainLand" 或 "UNKNOWN" (无工具)
+    # 返回: "GLOBAL" 或 "CNMainLand" 或 "UNKNOWN"
     if command -v curl &> /dev/null; then
         if curl -s --connect-timeout 3 https://www.google.com > /dev/null; then
             echo "GLOBAL"
@@ -233,7 +233,7 @@ function change_apt_source() {
     
     # ===> 对于国内服务器，切换至 NJU 源
     if [ "$SERVER_LOCATION" = "CNMainLand" ]; then
-        echo -e "\n${YELLOW} ===> 正在切换至南京大学 NJU 镜像源... ${NC}"
+        echo -e "\n${GREEN} ===> 正在切换至南京大学 NJU 镜像源... ${NC}"
 
         if grep -q "Ubuntu" /etc/issue; then
             # Ubuntu 逻辑：替换 archive.ubuntu.com, security.ubuntu.com 等主流域名
@@ -257,17 +257,25 @@ function change_apt_source() {
 }
 
 # ===> 逻辑开始
-apt update -y
-sleep 1s
 
 # ===> 第一次确定地区
 echo -e "\n${GREEN} ===> 正在确定服务器地区信息... (1/5) ${NC}"
+SERVER_LOCATION=$(check_network_region)
 sleep 1s
 
-if [ "$LOCATION" = "UNKNOWN" ]; then
+if [ "$SERVER_LOCATION" = "GLOBAL" ]; then
+    echo -e "\n${GREEN} Region：全球 (Global) ${NC}"
+elif [ "$SERVER_LOCATION" = "CNMainLand" ]; then
+    echo -e "\n${GREEN} Region：中国大陆地区 (CN) ${NC}"
+else
+    echo -e "\n${GREEN} Region：未知 ${NC}"
+fi
+
+if [ "$SERVER_LOCATION" = "UNKNOWN" ]; then
     
-    # 1. 强制切到 NJU HTTP 源 (无需证书即可连接)
+    # 1. 强制切到 NJU HTTP 源
     change_apt_source "CNMainLand"
+    apt update -y
     sleep 1s
     
     # 2. 更新并安装必备检测工具
@@ -275,17 +283,17 @@ if [ "$LOCATION" = "UNKNOWN" ]; then
     sleep 1s
     
     # 3. 第二次确定地区，现在可以正常使用 wget 或者 curl 工具
-    LOCATION=$(check_network_region)
+    SERVER_LOCATION=$(check_network_region)
     sleep 1s
     
     # 4. 根据真实结果修正源
-    if [ "$LOCATION" = "GLOBAL" ]; then
+    if [ "$SERVER_LOCATION" = "GLOBAL" ]; then
         # 如果发现是海外机器，恢复默认源
         change_apt_source "GLOBAL"
     fi
 else
     # 如果一开始就有工具，直接根据检测结果配置
-    if [ "$LOCATION" = "CNMainLand" ]; then
+    if [ "$SERVER_LOCATION" = "CNMainLand" ]; then
         # ===> 对于国内服务器，切换至 NJU 源
         change_apt_source "CNMainLand"
         # ===> 对于海外服务器则无需换源
