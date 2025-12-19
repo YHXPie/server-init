@@ -76,21 +76,53 @@ read -r CHANGE_HOSTNAME < /dev/tty
 sleep 1s
 
 if [[ "$CHANGE_HOSTNAME" =~ ^[Yy]$ ]]; then
-    echo -e "\n${RED} 主机名仅允许只允许字母、数字、下划线、短横线 ${NC}"
-    echo -ne "${GREEN} ===> 请输入新的主机名: ${NC}"
-    read -r NEW_HOSTNAME < /dev/tty
-    if [[ -n "$NEW_HOSTNAME" ]]; then
+    while true; do
+        echo -e "\n${RED} 主机名仅允许字母 (区分大小写)、数字、连字符；不能以连字符开头或结尾 ${NC}"
+        echo -ne "${GREEN} ===> 请输入新的主机名: ${NC}"
+        read -r NEW_HOSTNAME < /dev/tty
+        
+        # 验证是否为空
+        if [[ -z "$NEW_HOSTNAME" ]]; then
+            echo -e "\n${GREEN} 已跳过修改 ${NC}"
+            sleep 1s
+            break
+        fi
+
+        # 核心验证逻辑
+        # 正则含义：
+        # ^[a-zA-Z0-9]      : 必须以字母或数字开头
+        # [-a-zA-Z0-9]* : 中间可以包含字母、数字或连字符
+        # [a-zA-Z0-9]$      : 必须以字母或数字结尾 (防止以 - 结尾)
+        # {1,63}            : 长度限制 (可选，通常不超过 63 字符)
+        # ! ... =~          : 如果不匹配则报错
+        if [[ ! "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9]$ ]] && [[ ! "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9]$ ]]; then
+            echo -e "\n${RED} 错误：主机名格式不合法！ ${NC}"
+            echo -e "${RED} 主机名仅允许字母 (区分大小写)、数字、连字符；不能以连字符开头或结尾 ${NC}"
+            continue
+        fi
+
+        # 执行修改
         echo -e "\n${GREEN} ===> 正在设置... ${NC}"
-        hostnamectl set-hostname "$NEW_HOSTNAME"
-        # 尝试修正 /etc/hosts 里的记录，防止 sudo 解析慢
-        sed -i "s/127.0.1.1.*/127.0.1.1 $NEW_HOSTNAME/" /etc/hosts
-        echo -e "\n${GREEN} ===> 主机名修改完成 ${NC}"
-        echo -e "${GREEN} ===> Done. ${NC}"
-        sleep 3s
-    else
-        echo -e "\n${GREEN} 跳过修改 ${NC}"
-        sleep 1s
-    fi
+        
+        # 尝试设置，如果 hostnamectl 依然报错，则捕获错误并不让脚本退出
+        if hostnamectl set-hostname "$NEW_HOSTNAME"; then
+            # 尝试修正 /etc/hosts 里的记录，防止 sudo 解析慢
+            if grep -q "^127.0.1.1" /etc/hosts; then
+                sed -i "s/^127.0.1.1.*/127.0.1.1 $NEW_HOSTNAME/" /etc/hosts
+            else
+                echo "127.0.1.1 $NEW_HOSTNAME" >> /etc/hosts
+            fi
+
+            echo -e "${GREEN} ===> 主机名修改完成 ${NC}"
+            echo -e "${GREEN} ===> Done. ${NC}"
+            sleep 3s
+            break
+        else
+            echo -e "${RED} hostnamectl 设置失败，请重试或检查名称是否过长。 ${NC}"
+            continue
+        fi
+    done
+    sleep 3s
 else
     echo -e "\n${GREEN} 跳过修改 ${NC}"
     sleep 1s
