@@ -268,7 +268,7 @@ CURRENT_KERNEL_PKG="linux-image-$(uname -r)"
 # awk '{print $2}': 提取包名
 # grep -E "^linux-image-[0-9]": 筛选以数字开头的镜像包以自动排除 linux-image-generic 元包
 # grep -v "$CURRENT_KERNEL_PKG": 精准排除当前正在运行的内核包
-OLD_IMAGES=$(dpkg-query -W -f='${db:Status-Status} ${Package}\n' | grep '^installed' | awk '{print $2}' | grep -E "^linux-image-[0-9]" | grep -v "$CURRENT_KERNEL_PKG")
+OLD_IMAGES=$(dpkg-query -W -f='${db:Status-Status} ${Package}\n' | grep '^installed' | awk '{print $2}' | grep -E "^linux-image-[0-9]" | grep -v "$CURRENT_KERNEL_PKG" || true)
 
 if [ -n "$OLD_IMAGES" ]; then
     echo -e "${GREEN} ===> 正在清理旧版本 Linux 内核： ${NC}"
