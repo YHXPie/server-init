@@ -91,29 +91,30 @@ fi
 sleep 1s
 
 # ===> 1-2. 交互式获取公钥
+while true; do
+    echo -e "\n${GREEN} ===> 请粘贴您的 SSH 公钥 (ssh-rsa / ssh-ed25519 AAAA...):  ${NC}"
+    read -r PUB_KEY < /dev/tty
+    sleep 1s
 
-echo -e "\n${RED} ===> 请粘贴您的 SSH 公钥 (ssh-rsa / ssh-ed25519 AAAA...):  ${NC}"
-# 从 /dev/tty 读取输入，绕过 curl 管道占用的 stdin
-read -r PUB_KEY < /dev/tty
-sleep 1s
-
-# 非空验证
-if [[ -z "$PUB_KEY" ]]; then
-    echo -e "\n${RED} 错误: 公钥不能为空 ${NC}"
-    echo " 已退出，请重新执行 sudo bash init2.sh "
-    exit 1
-fi
-
-# 格式验证
-if [[ "$PUB_KEY" != ssh-* ]]; then
-    echo -e "\n${RED} 警告: 输入的内容看起来不像标准的 SSH 公钥 (不以 ssh- 开头) ${NC}"
-    echo -en "\n${RED} 是否继续? [y/N] ${NC}"
-    read -r CONFIRM < /dev/tty
-    if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
-        echo " 已取消，请重新执行 sudo bash init2.sh "
-        exit 1
+    # 非空验证
+    if [[ -z "$PUB_KEY" ]]; then
+        echo -e "\n${RED} 错误: 公钥不能为空，请重新输入 ${NC}"
+        continue
     fi
-fi
+
+    # 格式验证：如果看起来不像标准 SSH 公钥
+    if [[ "$PUB_KEY" != ssh-* ]]; then
+        echo -e "\n${RED} 警告: 输入的内容看起来不像标准的 SSH 公钥 (不以 ssh- 开头) ${NC}"
+        echo -en "\n${RED} 是否继续? [y/N]: ${NC}"
+        read -r CONFIRM < /dev/tty
+
+        if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+            echo -e "${RED} 请重新输入 SSH 公钥 ${NC}"
+            continue
+        fi
+    fi
+    break
+done
 
 echo -e "\n${GREEN} 已获取公钥，准备配置... ${NC}"
 sleep 1s
