@@ -87,8 +87,6 @@ if [ -d "/etc/ssh/sshd_config.d" ]; then
     # 删除目录下的所有 .conf 文件
     rm -f /etc/ssh/sshd_config.d/*.conf
     echo -e "\n${GREEN} ===> 已删除 /etc/ssh/sshd_config.d/ 下的配置文件 ${NC}"
-else
-    echo -e "\n${GREEN} 目录 /etc/ssh/sshd_config.d 不存在，跳过清理步骤 ${NC}"
 fi
 sleep 1s
 
@@ -123,7 +121,7 @@ sleep 1s
 # ===> 1-3. 变量定义
 # 填入需要创建的用户名
 echo -e "\n${RED} 用户名仅允许只允许字母、数字、下划线、短横线，且以字母开头 ${NC}"
-echo -e "\n${GREEN} ===> 请输入需要创建的用户名： ${NC}"
+echo -ne "\n${GREEN} ===> 请输入需要创建的用户名： ${NC}"
 read -r USERNAME_INPUT < /dev/tty
 USERNAME="$USERNAME_INPUT" 
 sleep 1s
@@ -196,6 +194,7 @@ ensure_config "PasswordAuthentication" "no"
 ensure_config "PubkeyAuthentication" "yes"
 ensure_config "KbdInteractiveAuthentication" "no"
 ensure_config "ChallengeResponseAuthentication" "no"
+sleep 1s
 
 # 给 Root 也配上一份密钥，作为 SSH 备用通道
 echo -e "\n${GREEN} 正在同步公钥给 Root 用户... ${NC}"
@@ -203,6 +202,7 @@ mkdir -p /root/.ssh
 echo "$PUB_KEY" > /root/.ssh/authorized_keys
 chmod 700 /root/.ssh
 chmod 600 /root/.ssh/authorized_keys
+sleep 1s
 
 # 在重启 SSH 前，强制设置用户密码
 # 这是为了 sudo 验证，以及 VNC 救急
