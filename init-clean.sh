@@ -39,7 +39,7 @@ echo -e "\n${GREEN} ===> Partly Done. (1/3) ${NC}"
 sleep 1s
 
 # 删除多余脚本
-rm init2.sh SSH_GUIDE.txt
+rm init2.sh SSH_GUIDE.md
 echo " 未使用的 init2.sh 脚本清理已完成 "
 echo -e "\n${GREEN} ===> Partly Done. (2/3) ${NC}"
 sleep 1s
