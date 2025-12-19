@@ -829,10 +829,10 @@ if [ "$SERVER_LOCATION" = "GLOBAL" ]; then
     curl -fLO $DOWNLOAD_DOMAIN/main/init-clean.sh || wget -O init-clean.sh $DOWNLOAD_DOMAIN/main/init-clean.sh
     curl -fLO $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md || wget -O SSH_GUIDE.md $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md
 else
-    DOWNLOAD_DOMAIN=https://yhxpie.netlify.app/server-init
-    curl -fLO $DOWNLOAD_DOMAIN/main/init2.sh || wget -O init2.sh $DOWNLOAD_DOMAIN/main/init2.sh
-    curl -fLO $DOWNLOAD_DOMAIN/main/init-clean.sh || wget -O init-clean.sh $DOWNLOAD_DOMAIN/main/init-clean.sh
-    curl -fLO $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md|| wget -O SSH_GUIDE.md $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md
+    DOWNLOAD_DOMAIN=https://yhxpie-server-init.netlify.app
+    curl -fLO $DOWNLOAD_DOMAIN/init2.sh || wget -O init2.sh $DOWNLOAD_DOMAIN/init2.sh
+    curl -fLO $DOWNLOAD_DOMAIN/init-clean.sh || wget -O init-clean.sh $DOWNLOAD_DOMAIN/init-clean.sh
+    curl -fLO $DOWNLOAD_DOMAIN/SSH_GUIDE.md|| wget -O SSH_GUIDE.md $DOWNLOAD_DOMAIN/SSH_GUIDE.md
 fi
 sleep 1s
 
