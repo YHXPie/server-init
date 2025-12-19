@@ -97,7 +97,6 @@ if [[ "$CHANGE_HOSTNAME" =~ ^[Yy]$ ]]; then
         # ! ... =~          : 如果不匹配则报错
         if [[ ! "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9]$ ]] && [[ ! "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9]$ ]]; then
             echo -e "\n${RED} 错误：主机名格式不合法！ ${NC}"
-            echo -e "${RED} 主机名仅允许字母 (区分大小写)、数字、连字符；不能以连字符开头或结尾 ${NC}"
             continue
         fi
 
@@ -113,7 +112,7 @@ if [[ "$CHANGE_HOSTNAME" =~ ^[Yy]$ ]]; then
                 echo "127.0.1.1 $NEW_HOSTNAME" >> /etc/hosts
             fi
 
-            echo -e "${GREEN} ===> 主机名修改完成 ${NC}"
+            echo -e "\n${GREEN} 主机名修改完成 ${NC}"
             echo -e "${GREEN} ===> Done. ${NC}"
             sleep 3s
             break
@@ -572,7 +571,7 @@ if grep -q "Ubuntu" /etc/issue; then
         rm -rf /root/snap /snap /var/snap /var/lib/snapd
         sleep 1s
         apt-mark hold snap
-        echo -e "\n${GREEN} ===> Snap 已移除并锁定 ${NC}"
+        echo -e "\n${GREEN} Snap 已移除并锁定 ${NC}"
         echo -e "${GREEN} ===> Done. ${NC}"
         sleep 3s
     else
@@ -654,7 +653,8 @@ function wait_for_ok() {
 
 # ===> 预定义 Docker 安装步骤
 function install_docker() {
-    echo -e "\n${GREEN} ===>  正在检查 Docker 安装条件... ${NC}"
+    echo -e "\n${GREEN} ===> 正在检查 Docker 安装条件... ${NC}"
+    echo -e " 当期服务器位置信息：$SERVER_LOCATION ${NC}"
     
     # 读取系统信息
     if [ -f /etc/os-release ]; then
@@ -772,7 +772,7 @@ case $PANEL_CHOICE in
 
     *)
         echo -e "\n${GREEN} 已跳过面板安装 ${NC}"
-        NEED_DOCKER_ASK=true
+        NEED_DOCKER_ASK=docker
         ;;
 esac
 
@@ -782,21 +782,21 @@ if [ "$NEED_DOCKER_ASK" = true ]; then
     echo -e "\n${GREEN} ===> Partly Done. (1/2) ${NC}"
     wait_for_ok
     sleep 1s
+fi
 
-    echo -e "\n${RED} ===> 是否安装 Docker 环境? [Y/n] ${NC}"
-    read -r DOCKER_CONFIRM < /dev/tty
-    if [[ "$DOCKER_CONFIRM" =~ ^[Yy]$ ]] || [[ -z "$DOCKER_CONFIRM" ]]; then
-        sleep 1s
-        install_docker
-        echo -e "\n${GREEN} ===> Done. ${NC}"
-        
-        # 用 ufw 强制关掉不安全的端口
-        echo -e "\n${RED} ===> 正在加固 ufw 防火墙... ${NC}"
-        ufw delete allow 20/tcp >/dev/null 2>&1 || true
-        ufw delete allow 21/tcp >/dev/null 2>&1 || true
-        ufw delete allow 888/tcp >/dev/null 2>&1 || true
-        ufw reload
-    fi
+echo -e "\n${RED} ===> 是否安装 Docker 环境? [Y/n] ${NC}"
+read -r DOCKER_CONFIRM < /dev/tty
+if [[ "$DOCKER_CONFIRM" =~ ^[Yy]$ ]] || [[ -z "$DOCKER_CONFIRM" ]]; then
+    sleep 1s
+    install_docker
+    echo -e "\n${GREEN} ===> Done. ${NC}"
+    
+    # 用 ufw 强制关掉不安全的端口
+    echo -e "\n${RED} ===> 正在加固 ufw 防火墙... ${NC}"
+    ufw delete allow 20/tcp >/dev/null 2>&1 || true
+    ufw delete allow 21/tcp >/dev/null 2>&1 || true
+    ufw delete allow 888/tcp >/dev/null 2>&1 || true
+    ufw reload
 fi
 sleep 3s
 
@@ -810,10 +810,10 @@ if command -v docker &> /dev/null; then
     # docker compose version 输出通常是 "Docker Compose version v2.21.0"
     C_VER=$(docker compose version 2>/dev/null | awk '{print $4}')
     
-    # 如果没取到 Compose 版本 比如旧版，则标记一下
+    # 如果没取到 Compose 版本比如旧版，则标记一下
     if [[ -z "$C_VER" ]]; then C_VER="Unknown"; fi
     
-    # 更新变量，让总结更漂亮
+    # 更新变量
     INSTALLED_DOCKER="${GREEN} 运行中 ：Docker $D_VER + Compose $C_VER ${NC}"
 elif [[ "$INSTALLED_DOCKER" == "否"* ]]; then
     # 保持原样，什么都不做
