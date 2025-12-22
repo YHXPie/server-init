@@ -17,11 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# GitHub: @yhxpie
-# https://github.com/yhxpie/server-init
-# Version 1.0.0
-# Last Update: 2025-12-18
-
 # 从 tty 读取输入是为了兼容 curl | bash 的运行方式
 
 # ===> 基础设置与检查
@@ -345,3 +340,8 @@ echo -e "\n  ____________________________ "
 echo -e " | GitHub: yhxpie/server-init | \n"
 
 # Done.
+
+# GitHub: @yhxpie
+# https://github.com/yhxpie/server-init
+# Version 1.0.2
+# Last Update: 2025-12-22

@@ -17,11 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# GitHub: @yhxpie
-# https://github.com/yhxpie/server-init
-# Version 1.0.0
-# Last Update: 2025-12-18
-
 # 从 tty 读取输入是为了兼容 curl | bash 的运行方式
 
 # 面板安装链接会定期手动更新
@@ -442,6 +437,10 @@ echo -ne "\n${RED} 请输入选项 [1/2] : ${NC}"
 # 从 tty 读取输入
 read -r SECURITY_CHOICE < /dev/tty
 
+dpkg --configure -a || true
+apt --fix-broken install -y || true
+sleep 1s
+
 # 逻辑判断：只有输入 2 才安装 SSHGuard，其他情况直接安装 Fail2ban
 if [[ "$SECURITY_CHOICE" == "2" ]]; then
     # 选项 B: SSHGuard 
@@ -718,6 +717,11 @@ function install_docker() {
 }
 
 # ===> 开始面板安装逻辑
+
+dpkg --configure -a || true
+apt --fix-broken install -y || true
+sleep 1s
+
 case $PANEL_CHOICE in
 # 面板安装脚本将统一命名为 install_panel.sh 方便清理
     [aA])
@@ -786,6 +790,11 @@ fi
 
 echo -e "\n${RED} ===> 是否安装 Docker 环境? [Y/n] ${NC}"
 read -r DOCKER_CONFIRM < /dev/tty
+
+dpkg --configure -a || true
+apt --fix-broken install -y || true
+sleep 1s
+
 if [[ "$DOCKER_CONFIRM" =~ ^[Yy]$ ]] || [[ -z "$DOCKER_CONFIRM" ]]; then
     sleep 1s
     install_docker
@@ -981,3 +990,8 @@ sleep 3s
 reboot
 
 # Done.
+
+# GitHub: @yhxpie
+# https://github.com/yhxpie/server-init
+# Version 1.0.2
+# Last Update: 2025-12-22

@@ -17,11 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# GitHub: @yhxpie
-# https://github.com/yhxpie/server-init
-# Version 1.0.0
-# Last Update: 2025-12-18
-
 # ===> 基础设置与检查
 # 遇到错误立即停止
 set -e
@@ -69,3 +64,8 @@ echo -e "\n  ____________________________ "
 echo -e " | GitHub: yhxpie/server-init | \n"
 
 # Done.
+
+# GitHub: @yhxpie
+# https://github.com/yhxpie/server-init
+# Version 1.0.2
+# Last Update: 2025-12-22

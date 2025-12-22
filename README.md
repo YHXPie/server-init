@@ -1,11 +1,5 @@
 # server-init for Debian / Ubuntu
 
-> [!IMPORTANT]
-> 最低系统要求：
-> **Debian 11**
-> &
-> **Ubuntu 22.04 LTS**
-
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Bash](https://img.shields.io/badge/Language-Bash-blue.svg)]()
 [![OS](https://img.shields.io/badge/OS-Debian%20%7C%20Ubuntu-orange)]()
@@ -13,6 +7,16 @@
 一个适用于 Debian / Ubuntu 服务器的自动化初始化脚本套件，
 包含系统基础配置、安全加固、内核升级、面板安装以及 Docker 环境部署等功能。
 
+> [!IMPORTANT]
+> 最低系统要求：
+> **Debian 11**
+> &
+> **Ubuntu 22.04 LTS**
+
+> [!CAUTION]
+> 项目名称为 `server-init` ，即只主动适配服务器系统，一些功能；理论上支持桌面端系统，但仍然不建议桌面端系统使用
+>
+> 例如脚本会清除 Snap，这会导致桌面端的 Ubuntu Software 出现问题
 ---
 
 ## 如何使用
@@ -112,6 +116,8 @@ sudo bash init-clean.sh
 > 同样地，在国内环境中安装 **aaPanel** 的速度也会较慢
 
 > [!IMPORTANT]
+> 脚本不保存任何安装文件，面板的所有文件全部从官方服务器直接获取
+>
 > 面板安装同步的版本号会有几天的延迟，可以在面板安装完成后进行更新
 
 ### Stage 2: `init2.sh`：进阶配置
