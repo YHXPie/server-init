@@ -246,8 +246,8 @@ clear
 echo -e "${GREEN} [1/$TOTAL_STEPS] 开始配置 SSH 密钥登录... DONE √ "
 echo -e " ===> [2/$TOTAL_STEPS] 正在清理旧内核与无用依赖 ... ${NC}"
 
-dpkg --configure -a || true
 apt --fix-broken install -y || true
+sleep 1s
 
 echo -e "\n${GREEN} ===> 正在确认当前内核... ${NC}"
 CURRENT_KERNEL=$(uname -r)
@@ -308,7 +308,7 @@ echo -e " ===> [3/$TOTAL_STEPS] 正在执行最终清理 ... ${NC}"
 sed -i '/# \[Server-init\] Stage 2 Reminder/,/fi/d' /root/.bashrc
 
 # 删除多余脚本
-rm init-clean.sh SSH_GUIDE.md
+rm init-clean.sh SSH_GUIDE.md || true
 echo " 未使用的 init-clean.sh 脚本清理已完成 "
 
 # apt 缓存清理

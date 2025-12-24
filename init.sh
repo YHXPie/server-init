@@ -208,9 +208,9 @@ echo -e " [3/$TOTAL_STEPS] 检查并配置 Swap... DONE √ "
 echo -e " ===> [4/$TOTAL_STEPS] 正在更新 apt 源... "
 sleep 1s
 
+
 # 在开始前，先检查并修复可能中断的包管理器状态
 echo -e "\n${GREEN} ===> 正在检查包管理器状态... ${NC}"
-dpkg --configure -a || true
 apt --fix-broken install -y || true
 sleep 1s
 
@@ -369,7 +369,7 @@ clear
 
 echo -e "\n${GREEN} ===> 正在安装基础软件... (4/5) ${NC}"
 # 安装基础软件
-PACKAGES="sudo vim nano ufw bash curl wget htop qemu-guest-agent"
+PACKAGES="sudo vim nano ufw bash curl wget htop qemu-guest-agent locales"
 
 echo -e "\n${GREEN} 即将安装：$PACKAGES ${NC}"
 
@@ -380,6 +380,16 @@ fi
 
 apt install -y $PACKAGES
 echo -e "\n${GREEN} ===> Partly Done. (4/5) ${NC}"
+sleep 1s
+
+# 配置语言环境：尝试生成 en_US.UTF-8
+if command -v locale-gen &> /dev/null; then
+    locale-gen en_US.UTF-8
+    update-locale LANG=en_US.UTF-8
+else
+    # 对于部分没有 locale-gen 命令的极简系统，尝试重新配置
+    dpkg-reconfigure -f noninteractive locales || true
+fi
 sleep 1s
 clear
 
@@ -421,7 +431,7 @@ echo -e "${GREEN} ===> Done. ${NC}"
 sleep 3s
 clear
 
-# ===> 6. 交互式选择安全放爆破组件
+# ===> 6. 交互式选择安全组件
 echo -e "${GREEN} [1/$TOTAL_STEPS] 设置时区为 Asia/Shanghai... DONE √ "
 echo -e " [2/$TOTAL_STEPS] 配置 TCP BBR... DONE √ "
 echo -e " [3/$TOTAL_STEPS] 检查并配置 Swap... DONE √ "
@@ -791,7 +801,19 @@ fi
 echo -e "\n${RED} ===> 是否安装 Docker 环境? [Y/n] ${NC}"
 read -r DOCKER_CONFIRM < /dev/tty
 
-dpkg --configure -a || true
+LOCKS=("/var/lib/dpkg/lock-frontend" "/var/lib/dpkg/lock")
+for LOCK_FILE in "${LOCKS[@]}"; do
+    while fuser "$LOCK_FILE" >/dev/null 2>&1; do
+        # 获取占用锁的进程 PID 和名称
+        LOCKED_PID=$(fuser "$LOCK_FILE" 2>/dev/null | awk '{print $1}')
+        LOCKED_CMD=$(ps -p "$LOCKED_PID" -o comm= 2>/dev/null)
+        
+        echo -e "${RED} 检测到 apt/dpkg 锁被占用 ${NC}"
+        echo -e "${RGREEN} 占用进程: $LOCKED_CMD (PID: $LOCKED_PID) ${NC}"
+        sleep 3s
+    done
+done
+
 apt --fix-broken install -y || true
 sleep 1s
 
@@ -846,11 +868,11 @@ echo -e "\n${GREEN} ===> Partly Done. (1/4) ${NC}"
 sleep 1s
 
 # 清理增强组件缓存
-rm -f install_panel.sh get-docker.sh
+rm -f install_panel.sh get-docker.sh || true
 # 清理 1Panel 安装残留的目录和压缩包
-rm -rf 1panel-v* 1panel-v*.tar.gz
+rm -rf 1panel-v* 1panel-v*.tar.gz || true
 # 清理 VPS 初始化的遗留日志
-rm -f virt-sysprep-firstboot.log
+rm -f virt-sysprep-firstboot.log || true
 
 echo -e "\n${GREEN} ===> Partly Done. (2/4) ${NC}"
 sleep 1s
