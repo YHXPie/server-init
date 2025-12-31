@@ -26,7 +26,6 @@ set -e
 # 颜色定义
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-# No Color
 NC='\033[0m' 
 
 # ===> 逻辑开始
@@ -34,7 +33,7 @@ echo -e "\n${RED} ===> 继续执行初始化... <=== ${NC}"
 
 # ===> 检查是否以 root 运行
 if [[ $EUID -ne 0 ]]; then
-   echo -e "${RED} 请使用 root 权限运行此脚本 $0${NC}"
+   echo -e "${RED} 请使用 root 权限运行此脚本：sudo $0${NC}"
    exit 1
 fi
 
@@ -74,14 +73,14 @@ sleep 1s
 # 随机忽略在主配置文件文件下面写的 'PasswordAuthentication no'
 # 要在自动化脚本里彻底解决这个问题，最暴力且有效的方法是：
 # 直接清空该目录下的干扰文件，或者直接注释掉 Include 指令
-echo -e "\n${GREEN} ===> 正在清理 SSH Drop-in 配置文件... ${NC}"
+echo -e "\n${GREEN} 正在清理 SSH Drop-in 配置文件... ${NC}"
 if [ -d "/etc/ssh/sshd_config.d" ]; then
     # 创建备份以防万一
     cp -r /etc/ssh/sshd_config.d /etc/ssh/sshd_config.d.bak
     
     # 删除目录下的所有 .conf 文件
     rm -f /etc/ssh/sshd_config.d/*.conf
-    echo -e "\n${GREEN} ===> 已删除 /etc/ssh/sshd_config.d/ 下的配置文件 ${NC}"
+    echo -e "\n${GREEN} 已删除 /etc/ssh/sshd_config.d/ 下的配置文件 ${NC}"
 fi
 sleep 1s
 
@@ -104,7 +103,7 @@ while true; do
         read -r CONFIRM < /dev/tty
 
         if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
-            echo -e "\n${RED} 请重新输入 SSH 公钥 ${NC}"
+            echo -e "\n${RED} 请重新输入 SSH 公钥： ${NC}"
             continue
         fi
     fi
@@ -133,7 +132,7 @@ fi
 if id "$USERNAME" &>/dev/null; then
     echo -e "\n${GREEN} 用户 $USERNAME 已存在，跳过创建 ${NC}"
 else
-    echo -e "\n${GREEN} ===> 正在创建用户 $USERNAME ... ${NC}"
+    echo -e "\n${GREEN} 正在创建用户 $USERNAME ... ${NC}"
     useradd -m -s /bin/bash "$USERNAME"
 fi
 sleep 1s
@@ -151,7 +150,7 @@ chmod 700 "$USER_HOME/.ssh"
 chmod 600 "$USER_HOME/.ssh/authorized_keys"
 chown -R "$USERNAME:$USERNAME" "$USER_HOME/.ssh"
 
-echo -e "\n${GREEN} ===> SSH 公钥已配置 "
+echo -e "\n${GREEN} SSH 公钥已配置 "
 echo -e " 如果需要为同一用户添加多个密钥，请手动在当前用户环境下手动执行 ${NC}"
 sleep 1s
 
@@ -159,7 +158,7 @@ sleep 1s
 # 写入 sudoers.d 避免修改 visudo
 echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$USERNAME"
 chmod 440 "/etc/sudoers.d/$USERNAME"
-echo -e "\n${GREEN} ===> Sudo 权限已配置 ${NC}"
+echo -e "\n${GREEN} Sudo 权限已配置 ${NC}"
 sleep 1s
 
 # ===> 1-7. 加固 ssh/sshd 主配置
@@ -170,7 +169,7 @@ SSHD_CONFIG="/etc/ssh/sshd_config"
 # 如果需要删除配置文件中的 Include 行，请取消注释下一行命令
 # sed -i 's/^Include/#Include/' $SSHD_CONFIG 
 
-echo -e "\n${GREEN} ===> 配置 SSH 服务... ${NC}"
+echo -e "\n${GREEN} 配置 SSH 服务... ${NC}"
 cp $SSHD_CONFIG "$SSHD_CONFIG.bak.$(date +%F)"
 
 # 使用 sed 强行替换或追加配置
@@ -193,7 +192,7 @@ ensure_config "ChallengeResponseAuthentication" "no"
 sleep 1s
 
 # 给 Root 也配上一份密钥，作为 SSH 备用通道
-echo -e "\n${GREEN} ===> 正在同步公钥给 Root 用户... ${NC}"
+echo -e "\n${GREEN} 正在同步公钥给 Root 用户... ${NC}"
 mkdir -p /root/.ssh
 echo "$PUB_KEY" > /root/.ssh/authorized_keys
 chmod 700 /root/.ssh
@@ -212,7 +211,7 @@ done
 
 # ===> 1-8. 收尾
 sshd -t # 检查语法
-systemctl restart ssh
+systemctl restart ssh || systemctl restart sshd
 sleep 1s
 
 echo -e "\n${GREEN} ===> 用户配置完成 <=== ${NC}"
@@ -226,12 +225,12 @@ echo -e "${GREEN}    - 正常情况：使用 'sudo -i' 可以直接以 root 运�
 
 sleep 1s
 
-echo -ne "\n${RED} 如果测试结果没有问题，请输入 'ok': ${NC}"
+echo -ne "\n${RED} ===> 如果测试结果没有问题，请输入 'ok': ${NC}"
 # 逻辑判断：只有在输入 ok 后才继续执行
 while true; do
-    read -r SSH_TEST_RESULT < /dev/tty || exit 1
+    read -r SSH_TEST_RESULT < /dev/tty
     if [[ "$SSH_TEST_RESULT" == "ok" ]] || [[ "$SSH_TEST_RESULT" == "OK" ]]; then
-        echo -e "\n${GREEN} ===> 确认成功... ${NC}"
+        echo -e "\n${GREEN} 确认成功 ${NC}"
         break
     else
         echo -ne "${RED} ===> 输入无效，请输入 'ok'： ${NC}"
@@ -249,7 +248,7 @@ echo -e " ===> [2/$TOTAL_STEPS] 正在清理旧内核与无用依赖 ... ${NC}"
 apt --fix-broken install -y || true
 sleep 1s
 
-echo -e "\n${GREEN} ===> 正在确认当前内核... ${NC}"
+echo -e "\n${GREEN} 正在确认当前内核... ${NC}"
 CURRENT_KERNEL=$(uname -r)
 echo -e "${GREEN} 当前运行内核${NC}: $CURRENT_KERNEL "
 sleep 1s
@@ -267,7 +266,7 @@ CURRENT_KERNEL_PKG="linux-image-$(uname -r)"
 OLD_IMAGES=$(dpkg-query -W -f='${db:Status-Status} ${Package}\n' | grep '^installed' | awk '{print $2}' | grep -E "^linux-image-[0-9]" | grep -v "$CURRENT_KERNEL_PKG" || true)
 
 if [ -n "$OLD_IMAGES" ]; then
-    echo -e "\n${GREEN} ===> 正在清理旧版本 Linux 内核： ${NC}"
+    echo -e "\n${GREEN} 正在清理旧版本 Linux 内核： ${NC}"
     echo -e "${RED} $OLD_IMAGES ${NC}"
     echo
     
@@ -276,13 +275,12 @@ if [ -n "$OLD_IMAGES" ]; then
     echo -e "\n${GREEN} Partly Done. (1/3) ${NC}"
     sleep 1s
     
-    echo -e "\n${GREEN} ===> 正在自动清理残留依赖... ${NC}"
+    echo -e "\n${GREEN} 正在清理残留依赖... ${NC}"
     # 这一步会解决 rmdir not empty 的问题
     apt autoremove -y --purge
     echo -e "\n${GREEN} Partly Done. (2/3) ${NC}"
     sleep 1s
     
-    echo -e "\n${GREEN} ===> 正在更新 Grub 引导菜单... ${NC}"
     update-grub
     sleep 1s
 
@@ -308,8 +306,7 @@ echo -e " ===> [3/$TOTAL_STEPS] 正在执行最终清理 ... ${NC}"
 sed -i '/# \[Server-init\] Stage 2 Reminder/,/fi/d' /root/.bashrc
 
 # 删除多余脚本
-rm init-clean.sh SSH_GUIDE.md || true
-echo " 未使用的 init-clean.sh 脚本清理已完成 "
+rm init-clean.sh SSH_GUIDE.md init.sh || true
 
 # apt 缓存清理
 apt clean
@@ -343,5 +340,5 @@ echo -e " | GitHub: yhxpie/server-init | \n"
 
 # GitHub: @yhxpie
 # https://github.com/yhxpie/server-init
-# Version 1.0.2
-# Last Update: 2025-12-22
+# Version 1.0.4
+# Last Update: 2025-12-31

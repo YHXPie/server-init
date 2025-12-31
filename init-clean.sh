@@ -34,8 +34,7 @@ echo -e "\n${GREEN} ===> Partly Done. (1/3) ${NC}"
 sleep 1s
 
 # 删除多余脚本
-rm init2.sh SSH_GUIDE.md
-echo " 未使用的 init2.sh 脚本清理已完成 "
+rm init2.sh SSH_GUIDE.md init.sh || true
 echo -e "\n${GREEN} ===> Partly Done. (2/3) ${NC}"
 sleep 1s
 
@@ -67,5 +66,5 @@ echo -e " | GitHub: yhxpie/server-init | \n"
 
 # GitHub: @yhxpie
 # https://github.com/yhxpie/server-init
-# Version 1.0.2
-# Last Update: 2025-12-22
+# Version 1.0.4
+# Last Update: 2025-12-31

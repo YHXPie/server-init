@@ -28,7 +28,6 @@ set -e
 # 颜色定义
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-# No Color
 NC='\033[0m' 
 
 # ===> 逻辑开始
@@ -37,7 +36,7 @@ sleep 1s
 
 # ===> 检查是否以 root 运行
 if [[ $EUID -ne 0 ]]; then
-   echo -e "${RED} 请使用 root 权限运行此脚本 $0${NC}"
+   echo -e "${RED} 请使用 root 权限运行此脚本：sudo $0${NC}"
    exit 1
 fi
 
@@ -91,12 +90,12 @@ if [[ "$CHANGE_HOSTNAME" =~ ^[Yy]$ ]]; then
         # {1,63}            : 长度限制 (可选，通常不超过 63 字符)
         # ! ... =~          : 如果不匹配则报错
         if [[ ! "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9]$ ]] && [[ ! "$NEW_HOSTNAME" =~ ^[a-zA-Z0-9]$ ]]; then
-            echo -e "\n${RED} 错误：主机名格式不合法！ ${NC}"
+            echo -e "\n${RED} 错误：主机名格式不合法 ${NC}"
             continue
         fi
 
         # 执行修改
-        echo -e "\n${GREEN} ===> 正在设置... ${NC}"
+        echo -e "\n${GREEN} 正在设置... ${NC}"
         
         # 尝试设置，如果 hostnamectl 依然报错，则捕获错误并不让脚本退出
         if hostnamectl set-hostname "$NEW_HOSTNAME"; then
@@ -112,13 +111,13 @@ if [[ "$CHANGE_HOSTNAME" =~ ^[Yy]$ ]]; then
             sleep 3s
             break
         else
-            echo -e "${RED} hostnamectl 设置失败，请重试或检查名称是否过长。 ${NC}"
+            echo -e "\n${RED} hostnamectl 设置失败，请重试或检查名称是否过长 ${NC}"
             continue
         fi
     done
     sleep 3s
 else
-    echo -e "\n${GREEN} 跳过修改 ${NC}"
+    echo -e "\n${GREEN} 已跳过修改 ${NC}"
     sleep 1s
 fi
 clear
@@ -129,11 +128,12 @@ sleep 1s
 timedatectl set-timezone Asia/Shanghai
 
 # 同步时间
-timedatectl set-ntp true
+# 加 true 防止部分 Debian 默认没有安装 ntp 服务
+timedatectl set-ntp true || true
 sleep 1s
 
 # 重启时间同步服务，确保立即生效
-# 加 || true 防止部分 Minimal 系统没有该服务报错
+# 加 true 防止部分 Minimal 系统没有该服务报错
 systemctl restart systemd-timesyncd.service 2>/dev/null || true
 sleep 1s
 
@@ -152,7 +152,7 @@ if ! grep -q "net.ipv4.tcp_congestion_control=bbr" /etc/sysctl.conf; then
     echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
     echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
     sysctl -p
-    echo -e "\n${GREEN} ===> BBR 已成功启用 ${NC}"
+    echo -e "\n${GREEN} BBR 已成功启用 ${NC}"
     echo -e "${GREEN} ===> Done. ${NC}"
     sleep 3s
 else
@@ -161,7 +161,7 @@ else
 fi
 clear
 
-# ===> 3. 配置 Swap (智能判断内存大小)
+# ===> 3. 配置 Swap
 echo -e "${GREEN} [1/$TOTAL_STEPS] 设置时区为 Asia/Shanghai... DONE √ "
 echo -e " [2/$TOTAL_STEPS] 配置 TCP BBR... DONE √ "
 echo -e " ===> [3/$TOTAL_STEPS] 检查并配置 Swap... ${NC}"
@@ -174,30 +174,54 @@ if [ -f /swapfile ]; then
 else
     # 获取物理内存大小 (MB)
     MEM_Total=$(free -m | awk '/Mem:/ { print $2 }')
-    # 策略：如果内存大于 1G，给 1G Swap；否则给 512MB
+    echo -e "\n${GREEN} 检测到系统内存: ${MEM_Total} MB ${NC}"
 
-    # 这一步尽量手动调整
-    # 默认的设计哲学是，小内存机器的各项配置包括磁盘配置不会太高
-    # 所以自然而然也不会跑高负载的服务，此时就不再需要过大的 Swap 了
-    if [ $MEM_Total -lt 1024 ]; then
-        SWAP_SIZE="512M"
-    else
-        SWAP_SIZE="1G"
+    echo -e "\n${RED} 请选择要创建的 Swap 大小： \n${NC}"
+    echo -e "${GREEN} A) 2GB${NC} - 适合高负载环境 "
+    echo -e "${GREEN} B) 1GB${NC} - 默认推荐配置 "
+    echo -e "${GREEN} C) 512MB${NC} - 小内存配置 "
+    echo -e "${GREEN} D) 256MB${NC} - 极小内存配置 "
+    echo -e "${GREEN} E) 32MB${NC} - 为了创建而创建 "
+    echo -e "${GREEN} F)${NC} 跳过 "
+    echo -ne "\n${RED} ===> 请输入选项 [A-F]: ${NC}"
+    read -r SWAP_CHOICE < /dev/tty
+    sleep 1s
+
+    case "$SWAP_CHOICE" in
+        [aA])
+            SWAP_SIZE=2G
+            ;;
+        [bB])
+            SWAP_SIZE=1G
+            ;;
+        [cC])
+            SWAP_SIZE=512M
+            ;;
+        [dD])
+            SWAP_SIZE=256M
+            ;;
+        [eE])
+            SWAP_SIZE=32M
+            ;;
+        *)
+            # 如果选了 F 或者输入错误，直接输出提示并利用 continue 或 if 跳过后续步骤
+            echo -e "\n${GREEN} 已跳过 Swap 配置 ${NC}"
+            SWAP_SIZE=""
+            ;;
+    esac
+
+    # 只有在 SWAP_SIZE 不为空时才执行创建逻辑
+    if [ -n "$SWAP_SIZE" ]; then
+        echo -e "\n${GREEN} ===> 正在创建 ${SWAP_SIZE} Swap... ${NC}"
+        fallocate -l $SWAP_SIZE /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=$(echo $SWAP_SIZE | sed 's/G/*1024/;s/M//' | bc)
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        echo -e "${GREEN} ===> Swap 创建完成. ${NC}"
+        echo -e "${GREEN} ===> Done. ${NC}"
+        sleep 3s
     fi
-    
-    echo -e "\n${GREEN} ===> 检测到系统内存: ${MEM_Total} MB，准备创建 ${SWAP_SIZE} Swap... ${NC}"
-    sleep 1s
-    
-    # fallocate 开始创建
-    fallocate -l $SWAP_SIZE /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    echo '/swapfile none swap sw 0 0' >> /etc/fstab
-    sleep 1s
-    echo -e "\n${GREEN} Swap 创建完成 ${NC}"
-    echo -e "${GREEN} ===> Done. ${NC}"
-    sleep 3s
 fi
 clear
 
@@ -210,7 +234,7 @@ sleep 1s
 
 
 # 在开始前，先检查并修复可能中断的包管理器状态
-echo -e "\n${GREEN} ===> 正在检查包管理器状态... ${NC}"
+echo -e "\n${GREEN} 正在检查包管理器状态... ${NC}"
 apt --fix-broken install -y || true
 sleep 1s
 
@@ -259,7 +283,7 @@ function change_apt_source() {
     
     # ===> 对于国内服务器，切换至 NJU 源
     if [ "$SERVER_LOCATION" = "CNMainLand" ]; then
-        echo -e "\n${GREEN} ===> 正在切换至南京大学 NJU 镜像源... ${NC}"
+        echo -e "\n${GREEN} 正在切换至南京大学 NJU 镜像源... ${NC}"
 
         if grep -q "Ubuntu" /etc/issue; then
             # Ubuntu 逻辑：替换 archive.ubuntu.com, security.ubuntu.com 等主流域名
@@ -276,7 +300,7 @@ function change_apt_source() {
         # ===> 恢复/保持 默认源 (GLOBAL)
         # 如果当前文件已经被改过，即含有 nju.edu.cn，则恢复备份
         if grep -q "nju.edu.cn" "$SOURCE_FILE"; then
-            echo -e "${GREEN} ===> 正在恢复至官方源... ${NC}"
+            echo -e "${GREEN} 正在重新恢复至官方源... ${NC}"
             cp "${SOURCE_FILE}.bak" "$SOURCE_FILE"
         fi
     fi
@@ -285,7 +309,7 @@ function change_apt_source() {
 # ===> 逻辑开始
 
 # ===> 第一次确定地区
-echo -e "\n${GREEN} ===> 正在确定服务器地区信息... (1/5) ${NC}"
+echo -e "\n${GREEN} 正在确定服务器地区信息... (1/5) ${NC}"
 SERVER_LOCATION=$(check_network_region)
 sleep 1s
 
@@ -320,9 +344,9 @@ if [ "$SERVER_LOCATION" = "UNKNOWN" ]; then
 else
     # 如果一开始就有工具，直接根据检测结果配置
     if [ "$SERVER_LOCATION" = "CNMainLand" ]; then
-        # ===> 对于国内服务器，切换至 NJU 源
+        # 对于国内服务器，切换至 NJU 源
         change_apt_source "CNMainLand"
-        # ===> 对于海外服务器则无需换源
+        # 对于海外服务器则无需换源
     fi
 fi
 echo -e "\n${GREEN} ===> Partly Done. (1/5) ${NC}"
@@ -330,7 +354,7 @@ sleep 1s
 clear
 
 # ===> 换源逻辑完成，开始切换至 HTTPS
-echo -e "\n${GREEN} ===> apt 源将切换至 https 模式 (2/5) ${NC}"
+echo -e "\n${GREEN} apt 源将切换至 https 模式 (2/5) ${NC}"
 sleep 1s
 
 # 这一步对于 Ubuntu 24.04 有点特殊，它的源格式变了：/etc/apt/sources.list.d/ubuntu.sources
@@ -361,26 +385,25 @@ echo -e "\n${GREEN} ===> Partly Done. (2/5) ${NC}"
 sleep 1s
 clear
 
-echo -e "\n${GREEN} ===> 正在更新软件包列表... (3/5) ${NC}"
+echo -e "\n${GREEN} 正在更新软件包列表... (3/5) ${NC}"
 apt update
 echo -e "\n${GREEN} ===> Partly Done. (3/5) ${NC}"
 sleep 1s
 clear
 
-echo -e "\n${GREEN} ===> 正在安装基础软件... (4/5) ${NC}"
+echo -e "\n${GREEN} 正在安装基础软件... (4/5) ${NC}"
 # 安装基础软件
 PACKAGES="sudo vim nano ufw bash curl wget htop qemu-guest-agent locales"
 
-echo -e "\n${GREEN} 即将安装：$PACKAGES ${NC}"
+echo -e "\n${GREEN} ===> 即将安装：$PACKAGES ${NC}"
 
 # 直接卸载 needrestart，避免干扰运行
 if dpkg -l | grep -q needrestart; then
     apt purge -y needrestart
 fi
+sleep 1s
 
 apt install -y $PACKAGES
-echo -e "\n${GREEN} ===> Partly Done. (4/5) ${NC}"
-sleep 1s
 
 # 配置语言环境：尝试生成 en_US.UTF-8
 if command -v locale-gen &> /dev/null; then
@@ -390,6 +413,8 @@ else
     # 对于部分没有 locale-gen 命令的极简系统，尝试重新配置
     dpkg-reconfigure -f noninteractive locales || true
 fi
+
+echo -e "\n${GREEN} ===> Partly Done. (4/5) ${NC}"
 sleep 1s
 clear
 
@@ -412,7 +437,7 @@ ufw default deny incoming
 ufw default allow outgoing
 
 # 放行 SSH 端口
-ufw allow OpenSSH || ufw allow ssh
+ufw allow OpenSSH || ufw allow ssh || ufw allow 22/tcp
 # 一些情况下写数字更明确，但是为了避免更换端口导致无法放行，这里改为 ssh
 
 # 放行常用 Web 端口
@@ -421,7 +446,7 @@ ufw allow 443/tcp
 
 # 启用防火墙
 # 使用 --force 参数来避免 "Command may disrupt existing ssh connections" 的交互式确认
-echo "\n${GREEN} ===> 正在启用 ufw 防火墙... ${NC}"
+echo "\n${GREEN} 正在启用 ufw 防火墙... ${NC}"
 ufw --force enable
 
 # 显示状态
@@ -447,7 +472,6 @@ echo -ne "\n${RED} 请输入选项 [1/2] : ${NC}"
 # 从 tty 读取输入
 read -r SECURITY_CHOICE < /dev/tty
 
-dpkg --configure -a || true
 apt --fix-broken install -y || true
 sleep 1s
 
@@ -544,13 +568,13 @@ if [[ "$KERNEL_VERSION" == *"azure"* ]] || \
     echo -e "\n${GREEN} 检测到专用内核，已跳过安装步骤 ${NC}"
     sleep 1s
 else
-    echo -e "\n${GREEN} ===> 检测到通用 Linux 内核，正在准备内核更新... ${NC}"
+    echo -e "\n${GREEN} 正在准备内核更新... ${NC}"
     sleep 1s
     # 仅在 Ubuntu 下尝试安装 HWE
     if grep -q "Ubuntu" /etc/issue; then
         apt install -y --install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
     else
-        echo -e "\n${GREEN} ===> 正在执行内核升级... ${NC}"
+        echo -e "\n${GREEN} 正在执行内核升级... ${NC}"
         apt upgrade -y linux-image-amd64 || true
     fi
     update-grub
@@ -609,8 +633,9 @@ if [ "$ROOT_FS" == "ext4" ]; then
     # 获取根目录分区名
     ROOT_DEV=$(findmnt / -o SOURCE -n)
     # 建议留 1% 给 root 救急，改成 0 有极端风险
+    sleep 1s
     tune2fs -m 1 "$ROOT_DEV" 
-    echo -e "\n${GREEN} ===> 已将 $ROOT_DEV 的保留空间调整为 1% ${NC}"
+    echo -e "\n${GREEN} 已将 $ROOT_DEV 的保留空间调整为 1% ${NC}"
     echo -e "${GREEN} ===> Done. ${NC}"
     sleep 3s
 else
@@ -652,7 +677,7 @@ function wait_for_ok() {
         # 强制从终端读取，防止管道干扰
         read -r CONFIRM < /dev/tty
         if [[ "$CONFIRM" == "ok" ]] || [[ "$CONFIRM" == "OK" ]]; then
-            echo -e "\n${GREEN} ===> 确认成功，继续执行... ${NC}"
+            echo -e "\n${GREEN} 确认成功，继续执行... ${NC}"
             break
         else
             echo -e "\n${RED} ===> 输入 'ok' 以继续... (Type 'ok' to continue): ${NC}"
@@ -662,8 +687,8 @@ function wait_for_ok() {
 
 # ===> 预定义 Docker 安装步骤
 function install_docker() {
-    echo -e "\n${GREEN} ===> 正在检查 Docker 安装条件... ${NC}"
-    echo -e " 当期服务器位置信息：$SERVER_LOCATION ${NC}"
+    echo -e "\n${GREEN} 正在检查 Docker 安装条件... ${NC}"
+    echo -e " 当前服务器位置信息：$SERVER_LOCATION ${NC}"
     
     # 读取系统信息
     if [ -f /etc/os-release ]; then
@@ -699,7 +724,7 @@ function install_docker() {
 
     # 如果不满足条件，直接跳过
     if [ "$SKIP_DOCKER_INSTALL" = true ]; then
-        echo -e "\n${RED}  ===> 为了系统安全，已自动跳过 Docker 安装 ${NC}"
+        echo -e "\n${RED} 为了系统安全，已自动跳过 Docker 安装 ${NC}"
         INSTALLED_DOCKER="否 (系统版本过低)"
         sleep 3
         # 直接退出
@@ -708,7 +733,7 @@ function install_docker() {
 
     echo -e "\n${GREEN} ===> 正在执行 Docker 安装... ${NC}"
     # 下载脚本并重命名为 get-docker.sh 以方便清理
-    curl -fsSL https://get.docker.com -o get-docker.sh
+    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 20 https://get.docker.com -o get-docker.sh
     case "$SERVER_LOCATION" in
     "GLOBAL")
         bash get-docker.sh
@@ -723,7 +748,6 @@ function install_docker() {
         bash get-docker.sh
         ;;
     esac
-
 }
 
 # ===> 开始面板安装逻辑
@@ -738,98 +762,89 @@ case $PANEL_CHOICE in
     # https://www.bt.cn/new/download.html
         echo -e "\n${GREEN} ===> 安装宝塔最新版... "
         echo -e " 请先根据安装脚本提示就行操作... ${NC}"
-        wget -O install_panel.sh https://download.bt.cn/install/install_panel.sh
+        wget --tries=5 --timeout=25 -O install_panel.sh https://download.bt.cn/install/install_panel.sh
         bash install_panel.sh ssl251104
         INSTALLED_PANEL=" 宝塔面板 - 最新版 "
         NEED_DOCKER_ASK=true
+        NEED_SAVE_PANEL_INFO=true
         ;;
-
     [bB])
     # https://www.bt.cn/new/download.html
         echo -e "\n${GREEN} ===> 安装宝塔稳定版... "
         echo -e " 请先根据安装脚本提示就行操作... ${NC}"
         sleep 3s
-        wget -O install_panel.sh https://download.bt.cn/install/installStable.sh
+        wget --tries=5 --timeout=25 -O install_panel.sh https://download.bt.cn/install/installStable.sh
         bash install_panel.sh ed8484bec
         INSTALLED_PANEL=" 宝塔面板 - 稳定版 v10.0 "
         NEED_DOCKER_ASK=true
+        NEED_SAVE_PANEL_INFO=true
         ;;
-
     [cC])
     # https://www.bt.cn/new/download.html
         echo -e "\n${GREEN} ===> 安装宝塔国际版 aaPanel ... "
         echo -e " 请先根据安装脚本提示就行操作... ${NC}"
         sleep 3s
-        wget --no-check-certificate -O install_panel.sh https://www.aapanel.com/script/install_7.0_en.sh
+        wget --tries=5 --timeout=25 --no-check-certificate -O install_panel.sh https://www.aapanel.com/script/install_7.0_en.sh
         bash install_panel.sh aapanel
         INSTALLED_PANEL=" aaPanel v7.0.28 "
         NEED_DOCKER_ASK=true
+        NEED_SAVE_PANEL_INFO=true
         ;;
-
     [dD])
     # https://1panel.cn/#quickstart
         echo -e "\n${GREEN} ===> 安装 1Panel ... "
         echo -e " 请先根据安装脚本提示就行操作，并直接安装 Docker... ${NC}"
         echo -e "${RED} 请注意，后续步骤中将不再单独安装 Docker ${NC}"
         sleep 3s
-        wget -O install_panel.sh https://resource.fit2cloud.com/1panel/package/v2/quick_start.sh
+        wget --tries=5 --timeout=25 -O install_panel.sh https://resource.fit2cloud.com/1panel/package/v2/quick_start.sh
         bash install_panel.sh
         INSTALLED_PANEL=" 1Panel "
         INSTALLED_DOCKER="是 (包含于 1Panel)"
         NEED_DOCKER_ASK=false
+        NEED_SAVE_PANEL_INFO=false
         
         # 对于 1Panel，直接确认保存登录信息
         echo -e "\n${GREEN} ===> Done. ${NC}"
         wait_for_ok
         sleep 3s
         ;;
-
     *)
         echo -e "\n${GREEN} 已跳过面板安装 ${NC}"
-        NEED_DOCKER_ASK=docker
+        NEED_DOCKER_ASK=true
         ;;
 esac
 
 # ===> 宝塔/aaPanel 后续逻辑
-if [ "$NEED_DOCKER_ASK" = true ]; then
+if [ "$NEED_SAVE_PANEL_INFO" = true ]; then
     # 确认保存登录信息
     echo -e "\n${GREEN} ===> Partly Done. (1/2) ${NC}"
     wait_for_ok
-    sleep 1s
 fi
-
-echo -e "\n${RED} ===> 是否安装 Docker 环境? [Y/n] ${NC}"
-read -r DOCKER_CONFIRM < /dev/tty
-
-LOCKS=("/var/lib/dpkg/lock-frontend" "/var/lib/dpkg/lock")
-for LOCK_FILE in "${LOCKS[@]}"; do
-    while fuser "$LOCK_FILE" >/dev/null 2>&1; do
-        # 获取占用锁的进程 PID 和名称
-        LOCKED_PID=$(fuser "$LOCK_FILE" 2>/dev/null | awk '{print $1}')
-        LOCKED_CMD=$(ps -p "$LOCKED_PID" -o comm= 2>/dev/null)
-        
-        echo -e "${RED} 检测到 apt/dpkg 锁被占用 ${NC}"
-        echo -e "${RGREEN} 占用进程: $LOCKED_CMD (PID: $LOCKED_PID) ${NC}"
-        sleep 3s
-    done
-done
-
-apt --fix-broken install -y || true
 sleep 1s
 
-if [[ "$DOCKER_CONFIRM" =~ ^[Yy]$ ]] || [[ -z "$DOCKER_CONFIRM" ]]; then
+if [ "$NEED_DOCKER_ASK" = true ]; then
+    echo -ne "\n${RED} ===> 是否安装 Docker 环境? [Y/n]： ${NC}"
+    read -r DOCKER_CONFIRM < /dev/tty
+
+    apt --fix-broken install -y || true
     sleep 1s
-    install_docker
-    echo -e "\n${GREEN} ===> Done. ${NC}"
+
+    if [[ "$DOCKER_CONFIRM" =~ ^[Yy]$ ]] || [[ -z "$DOCKER_CONFIRM" ]]; then
+        echo " 请稍后... "
+        # 等待1秒是因为偶尔会出现 apt/dpkg 锁的情况
+        sleep 3s
+        install_docker
+        sleep 1s
+        echo -e "\n${GREEN} ===> Done. ${NC}"
     
-    # 用 ufw 强制关掉不安全的端口
-    echo -e "\n${RED} ===> 正在加固 ufw 防火墙... ${NC}"
-    ufw delete allow 20/tcp >/dev/null 2>&1 || true
-    ufw delete allow 21/tcp >/dev/null 2>&1 || true
-    ufw delete allow 888/tcp >/dev/null 2>&1 || true
-    ufw reload
+        # 用 ufw 强制关掉不安全的端口
+        ufw delete allow 20/tcp >/dev/null 2>&1 || true
+        ufw delete allow 21/tcp >/dev/null 2>&1 || true
+        ufw delete allow 888/tcp >/dev/null 2>&1 || true
+        ufw reload
+    fi
+    sleep 3s
 fi
-sleep 3s
 
 # ===> 读取 Docker 版本信息
 if command -v docker &> /dev/null; then
@@ -853,7 +868,7 @@ else
     # 比如安装失败了
     INSTALLED_DOCKER="${RED} 未检测到命令 (安装可能失败) ${NC}"
 fi
-sleep 3
+
 clear
 
 # ===> 清理缓存
@@ -864,7 +879,6 @@ sleep 1s
 apt update
 apt autoremove --purge -y
 apt clean
-echo -e "\n${GREEN} ===> Partly Done. (1/4) ${NC}"
 sleep 1s
 
 # 清理增强组件缓存
@@ -873,24 +887,18 @@ rm -f install_panel.sh get-docker.sh || true
 rm -rf 1panel-v* 1panel-v*.tar.gz || true
 # 清理 VPS 初始化的遗留日志
 rm -f virt-sysprep-firstboot.log || true
-
-echo -e "\n${GREEN} ===> Partly Done. (2/4) ${NC}"
 sleep 1s
 
 # ===> 采集基本系统信息，为总结做准备
 
 # CPU 型号 (提取第一行 model name)
 CPU_MODEL=$(grep -m1 'model name' /proc/cpuinfo | awk -F: '{print $2}' | sed 's/^[ \t]*//')
-
 # 内存使用 (已用/总计)
 MEM_USAGE=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
-
 # Swap 使用 (已用/总计)
 SWAP_USAGE=$(free -h | awk '/Swap:/ {print $3 "/" $2}')
-
 # 磁盘使用 (根目录 / 的占用)
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
-
 # 系统信息
 if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -898,35 +906,31 @@ if [ -f /etc/os-release ]; then
 else
     SYSTEM_INFO="Unknown Linux"
 fi
-
 # 内核版本
 KERNEL_VER=$(uname -r)
-
 # 公网 IP 
 PUBLIC_IP=$(curl -s --max-time 3 https://api.ip.sb/ip -A Mozilla || echo "获取失败")
 
-# 完成
-echo -e "\n${GREEN} ===> Partly Done. (3/4) ${NC}"
 sleep 1s
 
 # 下载后续文件
+CURL_DOWNLOAD_RETRY="--retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 20"
+WGET_DOWNLOAD_RETRY="--tries=5 --timeout=25"
 if [ "$SERVER_LOCATION" = "GLOBAL" ]; then
     DOWNLOAD_DOMAIN=https://raw.githubusercontent.com/yhxpie/server-init
-    curl -fLO $DOWNLOAD_DOMAIN/main/init2.sh || wget -O init2.sh $DOWNLOAD_DOMAIN/main/init2.sh
-    curl -fLO $DOWNLOAD_DOMAIN/main/init-clean.sh || wget -O init-clean.sh $DOWNLOAD_DOMAIN/main/init-clean.sh
-    curl -fLO $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md || wget -O SSH_GUIDE.md $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md
+    curl -fLO $CURL_DOWNLOAD_RETRY $DOWNLOAD_DOMAIN/main/init2.sh || wget $WGET_DOWNLOAD_RETRY -O init2.sh $DOWNLOAD_DOMAIN/main/init2.sh
+    curl -fLO $CURL_DOWNLOAD_RETRY $DOWNLOAD_DOMAIN/main/init-clean.sh || wget $WGET_DOWNLOAD_RETRY -O init-clean.sh $DOWNLOAD_DOMAIN/main/init-clean.sh
+    curl -fLO $CURL_DOWNLOAD_RETRY $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md || wget $WGET_DOWNLOAD_RETRY -O SSH_GUIDE.md $DOWNLOAD_DOMAIN/main/SSH_GUIDE.md
 else
     DOWNLOAD_DOMAIN=https://yhxpie-server-init.netlify.app
-    curl -fLO $DOWNLOAD_DOMAIN/init2.sh || wget -O init2.sh $DOWNLOAD_DOMAIN/init2.sh
-    curl -fLO $DOWNLOAD_DOMAIN/init-clean.sh || wget -O init-clean.sh $DOWNLOAD_DOMAIN/init-clean.sh
-    curl -fLO $DOWNLOAD_DOMAIN/SSH_GUIDE.md|| wget -O SSH_GUIDE.md $DOWNLOAD_DOMAIN/SSH_GUIDE.md
+    curl -fLO $CURL_DOWNLOAD_RETRY $DOWNLOAD_DOMAIN/init2.sh || wget $WGET_DOWNLOAD_RETRY -O init2.sh $DOWNLOAD_DOMAIN/init2.sh
+    curl -fLO $CURL_DOWNLOAD_RETRY $DOWNLOAD_DOMAIN/init-clean.sh || wget $WGET_DOWNLOAD_RETRY -O init-clean.sh $DOWNLOAD_DOMAIN/init-clean.sh
+    curl -fLO $CURL_DOWNLOAD_RETRY $DOWNLOAD_DOMAIN/SSH_GUIDE.md|| wget $WGET_DOWNLOAD_RETRY -O SSH_GUIDE.md $DOWNLOAD_DOMAIN/SSH_GUIDE.md
 fi
 sleep 1s
 
-# 完成
-echo -e "${GREEN} ===> Done. (4/4) ${NC}"
+echo -e "${GREEN} ===> Done. ${NC}"
 sleep 3s
-
 clear
 
 # ===> 完成总结
@@ -996,8 +1000,8 @@ if [ -f "$0" ]; then
     echo " init.sh 脚本清理已完成 "
 fi
 
-echo -e "\n${GREEN}=============================================${NC}"
-echo -e "\n${RED} ===> 由于更新了内核，即将重启系统 "
+echo -e "\n${GREEN} =============================================${NC}"
+echo -e "\n${RED} 由于更新了内核，即将重启系统 "
 sleep 3s
 echo -e "\n${GREEN} ===> 正在重启... SSH 将断开连接 ${NC}"
 echo -e "${RED} 涉及内核更新后的重启可能需要更多时间 ${NC}"
@@ -1015,5 +1019,5 @@ reboot
 
 # GitHub: @yhxpie
 # https://github.com/yhxpie/server-init
-# Version 1.0.2
-# Last Update: 2025-12-22
+# Version 1.0.4
+# Last Update: 2025-12-31
