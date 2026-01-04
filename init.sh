@@ -128,17 +128,23 @@ sleep 1s
 timedatectl set-timezone Asia/Shanghai
 
 # 同步时间
-# 加 true 防止部分 Debian 默认没有安装 ntp 服务
-timedatectl set-ntp true || true
+# 部分 Debian 可能默认没有安装 ntp 服务
+timedatectl set-ntp true || TIME_SYNC=ok
 sleep 1s
 
 # 重启时间同步服务，确保立即生效
 # 加 true 防止部分 Minimal 系统没有该服务报错
-systemctl restart systemd-timesyncd.service 2>/dev/null || true
+systemctl restart systemd-timesyncd.service 2>/dev/null || TIME_SYNC_AGAIN=yes
+sleep 1s
+
+sudo timedatectl set-local-rtc 0 || true
 sleep 1s
 
 # 显示时间
-echo -e "\n${RED} 当前时间${NC}: $(date)"
+if [ "$TIME_SYNC" = "ok" ]; then
+    echo -e "\n${RED} 当前时间${NC}: $(date)"
+fi
+    
 echo -e "${GREEN} ===> Done. ${NC}"
 sleep 3s
 clear
@@ -218,7 +224,7 @@ else
         mkswap /swapfile
         swapon /swapfile
         echo '/swapfile none swap sw 0 0' >> /etc/fstab
-        echo -e "${GREEN} ===> Swap 创建完成. ${NC}"
+        echo -e "${GREEN} Swap 创建完成. ${NC}"
         echo -e "${GREEN} ===> Done. ${NC}"
         sleep 3s
     fi
@@ -393,7 +399,7 @@ clear
 
 echo -e "\n${GREEN} 正在安装基础软件... (4/5) ${NC}"
 # 安装基础软件
-PACKAGES="sudo vim nano ufw bash curl wget htop qemu-guest-agent locales"
+PACKAGES="sudo vim nano ufw bash curl wget htop qemu-guest-agent locales systemd-timesyncd"
 
 echo -e "\n${GREEN} ===> 即将安装：$PACKAGES ${NC}"
 
@@ -413,6 +419,19 @@ else
     # 对于部分没有 locale-gen 命令的极简系统，尝试重新配置
     dpkg-reconfigure -f noninteractive locales || true
 fi
+sleep 1s
+
+# 有必要则使用 systemd-timesyncd 再次同步时间
+if [ "$TIME_SYNC_AGAIN" = "yes" ]; then
+    sudo systemctl enable --now systemd-timesyncd
+    sleep 1s
+    sudo timedatectl set-ntp on
+    sleep 1s
+    sudo timedatectl set-local-rtc 0 || true
+    timedatectl
+    echo -e "\n${GREEN} 当前时间${NC}: $(date)"
+fi
+sleep 1s
 
 echo -e "\n${GREEN} ===> Partly Done. (4/5) ${NC}"
 sleep 1s
@@ -446,7 +465,7 @@ ufw allow 443/tcp
 
 # 启用防火墙
 # 使用 --force 参数来避免 "Command may disrupt existing ssh connections" 的交互式确认
-echo "\n${GREEN} 正在启用 ufw 防火墙... ${NC}"
+echo -e "\n${GREEN} 正在启用 ufw 防火墙... ${NC}"
 ufw --force enable
 
 # 显示状态
@@ -568,14 +587,12 @@ if [[ "$KERNEL_VERSION" == *"azure"* ]] || \
     echo -e "\n${GREEN} 检测到专用内核，已跳过安装步骤 ${NC}"
     sleep 1s
 else
-    echo -e "\n${GREEN} 正在准备内核更新... ${NC}"
-    sleep 1s
     # 仅在 Ubuntu 下尝试安装 HWE
     if grep -q "Ubuntu" /etc/issue; then
+        echo -e "\n${GREEN} 正在准备内核更新... ${NC}"
         apt install -y --install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
     else
-        echo -e "\n${GREEN} 正在执行内核升级... ${NC}"
-        apt upgrade -y linux-image-amd64 || true
+        echo -e "\n${GREEN} 内核已是最新 ${NC}"
     fi
     update-grub
     sleep 1s
@@ -1019,5 +1036,5 @@ reboot
 
 # GitHub: @yhxpie
 # https://github.com/yhxpie/server-init
-# Version 1.0.4
-# Last Update: 2025-12-31
+# Version 1.0.5
+# Last Update: 2026-1-4
