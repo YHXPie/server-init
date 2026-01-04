@@ -46,21 +46,14 @@ curl -O https://raw.githubusercontent.com/yhxpie/server-init/main/init.sh || wge
 ```bash
 curl -O https://yhxpie-server-init.netlify.app/init.sh || wget -O ${_##*/} $_ && bash init.sh
 ```
-> [!TIP]
-> 对于某些 Minimal 系统如果没有安装 wget，则可以使用 curl | bash 尝试：
-> 
-> **国外服务器：**
-> ```bash
-> curl -sS https://raw.githubusercontent.com/yhxpie/server-init/main/init.sh | bash
-> ```
-> 
-> **国内服务器：**
-> ```bash
-> curl -sS https://yhxpie-server-init.netlify.app/init.sh | bash
-> ```
 
 > [!WARNING]
 > 脚本执行完毕后，系统将强制重启以应用新内核。
+
+对于完全测试环境，可以使用：
+```bash
+curl -O https://yhxpie-server-init.netlify.app/init-test.sh || wget -O ${_##*/} $_ && bash init.sh
+```
 
 ### 第二步：配置用户与清理
 
@@ -88,12 +81,13 @@ sudo bash init-clean.sh
 ### Stage 1: `init.sh`：服务器基础配置
 
 - **基础设置**：
+  - 修改主机名称
   - 设置时区为 `Asia/Shanghai`，开启 NTP 时间同步
+- **网络优化**：
+  - 开启 TCP BBR 拥塞控制算法
 - **智能源配置**：
   - 自动检测服务器地区，大陆地区自动切换至南京大学 NJU 镜像源
   - 将更新源从 HTTP 切换为 HTTPS
-- **网络优化**：
-  - 开启 TCP BBR 拥塞控制算法
 - **安全防护**：
   - 配置 UFW 防火墙
   - 提供 **Fail2ban** 或 **SSHGuard** 防暴力破解组件
@@ -118,7 +112,7 @@ sudo bash init-clean.sh
 > [!IMPORTANT]
 > 脚本不保存任何安装文件，面板的所有文件全部从官方服务器直接获取
 >
-> 面板安装同步的版本号会有几天的延迟，可以在面板安装完成后进行更新
+> 面板安装同步的版本号会有一段时间的延迟，可以在面板安装完成后进行更新
 
 ### Stage 2: `init2.sh`：进阶配置
 
@@ -134,6 +128,25 @@ sudo bash init-clean.sh
 - **深度清理**：
   - 精准识别并移除旧版本内核
   - 移除无用依赖与残留配置文件
+
+### `init-test.sh`：测试环境快速配置
+
+单阶段快速配置，适用于快速简单部署测试环境不含任何 `sleep` 等待时间或多余提示。
+
+- **基础设置**：
+  - 设置时区为 `Asia/Shanghai`
+- **网络优化**：
+  - 开启 TCP BBR 拥塞控制算法
+- **智能源配置**：
+  - 自动检测服务器地区，大陆地区自动切换至南京大学 NJU 镜像源
+- **安全防护**：
+  - 配置 UFW 防火墙
+- **环境部署 (可选)**：
+  - 安装 Docker CE & Docker Compose，自动匹配国内/官方源
+  - 安装服务器面板：
+    - 宝塔面板：最新版/稳定版
+    - aaPanel (宝塔国际版) (English Only)
+    - 1Panel
 
 ---
 
