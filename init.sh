@@ -129,7 +129,7 @@ timedatectl set-timezone Asia/Shanghai
 
 # 同步时间
 # 部分 Debian 可能默认没有安装 ntp 服务
-timedatectl set-ntp true
+timedatectl set-ntp true || true
 sleep 1s
 
 # 重启时间同步服务，确保立即生效
