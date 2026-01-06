@@ -129,7 +129,7 @@ timedatectl set-timezone Asia/Shanghai
 
 # 同步时间
 # 部分 Debian 可能默认没有安装 ntp 服务
-timedatectl set-ntp true || TIME_SYNC=ok
+timedatectl set-ntp true
 sleep 1s
 
 # 重启时间同步服务，确保立即生效
@@ -141,9 +141,7 @@ sudo timedatectl set-local-rtc 0 || true
 sleep 1s
 
 # 显示时间
-if [ "$TIME_SYNC" = "ok" ]; then
-    echo -e "\n${RED} 当前时间${NC}: $(date)"
-fi
+echo -e "\n${RED} 当前时间${NC}: $(date)"
     
 echo -e "${GREEN} ===> Done. ${NC}"
 sleep 3s
@@ -590,7 +588,7 @@ else
     # 仅在 Ubuntu 下尝试安装 HWE
     if grep -q "Ubuntu" /etc/issue; then
         echo -e "\n${GREEN} 正在准备内核更新... ${NC}"
-        apt install -y --no-install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
+        apt install -y --install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
     else
         echo -e "\n${GREEN} 内核已是最新 ${NC}"
     fi
