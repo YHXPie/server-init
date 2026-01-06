@@ -590,7 +590,7 @@ else
     # 仅在 Ubuntu 下尝试安装 HWE
     if grep -q "Ubuntu" /etc/issue; then
         echo -e "\n${GREEN} 正在准备内核更新... ${NC}"
-        apt install -y --install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
+        apt install -y --no-install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
     else
         echo -e "\n${GREEN} 内核已是最新 ${NC}"
     fi
