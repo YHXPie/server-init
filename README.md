@@ -82,7 +82,7 @@ sudo bash init-clean.sh
 
 - **基础设置**：
   - 修改主机名称
-  - 设置时区为 `Asia/Shanghai`，开启 NTP 时间同步
+  - 设置时区为 `Asia/Shanghai` 并同步时间
 - **网络优化**：
   - 开启 TCP BBR 拥塞控制算法
 - **智能源配置**：
@@ -94,7 +94,8 @@ sudo bash init-clean.sh
 - **内核升级**：
   - 自动更新系统内核
   - Ubuntu 支持更新至 HWE 硬件增强堆栈内核
-- **系统清理优化**：
+- **系统清理和优化**：
+  - 创建 Swap
   - Ubuntu 卸载 Snap
   - 释放 ext4 预留磁盘空间至 1%
 - **环境部署 (可选)**：
@@ -134,19 +135,14 @@ sudo bash init-clean.sh
 单阶段快速配置，适用于快速简单部署测试环境不含任何 `sleep` 等待时间或多余提示。
 
 - **基础设置**：
-  - 设置时区为 `Asia/Shanghai`
+  - 设置时区为 `Asia/Shanghai` 并同步时间
 - **网络优化**：
   - 开启 TCP BBR 拥塞控制算法
-- **智能源配置**：
-  - 自动检测服务器地区，大陆地区自动切换至南京大学 NJU 镜像源
-- **安全防护**：
-  - 配置 UFW 防火墙
-- **环境部署 (可选)**：
-  - 安装 Docker CE & Docker Compose，自动匹配国内/官方源
-  - 安装服务器面板：
-    - 宝塔面板：最新版/稳定版
-    - aaPanel (宝塔国际版) (English Only)
-    - 1Panel
+- **apt 源配置**：
+  - 自动检测服务器地区，大陆地区自动切换至 NJU 镜像源
+- **环境部署**：
+  - 安装 Docker
+  - 安装最新版宝塔面板 (可选)
 
 ---
 
@@ -167,10 +163,10 @@ sudo bash init-clean.sh
 | 25.04 (Plucky Puffin) | Verifed | ✅ | ✅ |
 | 24.04 LTS (Noble Numbat) | Verifed | ✅ | ✅ |
 | 22.04 LTS (Jammy Jellyfish) | Verifed | ✅ | ✅ |
-| 20.04 LTS (Focal Fossa) | ❌ | ⚠️ Docker 无法安装 |  |
-| 18.04 LTS (Bionic Beaver) | ❌ | ⚠️ Docker 无法安装 |  |
-| 16.04 LTS (Xenial Xerus) | ❌ | ⚠️ Docker 无法安装 |  |
-| 14.04 LTS (Trusty Tahr) | ❌ | ⚠️ Docker 无法安装 |  |
+| 20.04 LTS (Focal Fossa) | ❌ | ⚠️ Docker |  |
+| 18.04 LTS (Bionic Beaver) | ❌ | ⚠️ Docker |  |
+| 16.04 LTS (Xenial Xerus) | ❌ | ⚠️ Docker |  |
+| 14.04 LTS (Trusty Tahr) | ❌ | ⚠️ Docker |  |
 
 ### Debian <img width="16" height="16" src="https://www.debian.org/favicon.ico" />
 
