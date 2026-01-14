@@ -482,7 +482,7 @@ echo -e " [5/$TOTAL_STEPS] 配置 ufw 防火墙... DONE √ "
 echo -e " ===> [6/$TOTAL_STEPS] 配置安全组件... ${NC}"
 sleep 1s
 echo -e "\n${RED} 选择要安装的安全防护工具： \n${NC}"
-echo -e "${GREEN} 1) ${NC} Fail2ban (${GREEN} 默认 ${NC} - 功能强大，日志清晰，但负载占用稍高) "
+echo -e "${GREEN} 1) ${NC} Fail2ban (${GREEN} 默认 ${NC} - 功能强大但负载占用稍高) "
 echo -e "${GREEN} 2) ${NC} SSHGuard (更加轻量，资源占用更低) "
 echo -ne "\n${RED} 请输入选项 [1/2] : ${NC}"
 
@@ -495,7 +495,7 @@ sleep 1s
 # 逻辑判断：只有输入 2 才安装 SSHGuard，其他情况直接安装 Fail2ban
 if [[ "$SECURITY_CHOICE" == "2" ]]; then
     # 选项 B: SSHGuard 
-    echo -e "\n${GREEN} ===> 已选择: SSHGuard (轻量级方案) ${NC}"
+    echo -e "\n${GREEN} ===> 已选择: SSHGuard ${NC}"
     INSTALLED_SECURITY_TOOL="SSHGuard"
     
     # 开始安装
@@ -588,7 +588,7 @@ else
     # 仅在 Ubuntu 下尝试安装 HWE
     if grep -q "Ubuntu" /etc/issue; then
         echo -e "\n${GREEN} 正在准备内核更新... ${NC}"
-        apt install -y --install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
+        apt install -y --no-install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
     else
         echo -e "\n${GREEN} 内核已是最新 ${NC}"
     fi
