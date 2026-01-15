@@ -587,8 +587,14 @@ if [[ "$KERNEL_VERSION" == *"azure"* ]] || \
 else
     # 仅在 Ubuntu 下尝试安装 HWE
     if grep -q "Ubuntu" /etc/issue; then
-        echo -e "\n${GREEN} 正在准备内核更新... ${NC}"
-        apt install -y --no-install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
+        echo -ne "\n${GREEN} 是否需要安装 HWE 硬件增强堆栈内核? [y/N]: ${NC}"
+        read -r INSTALL_HWE_KERNEL < /dev/tty
+        if [[ "$INSTALL_HWE_KERNEL" =~ ^[Yy]$ ]]; then
+            echo -e "\n${GREEN} 正在准备 HWE 内核更新... ${NC}"
+            apt install -y --no-install-recommends linux-generic-hwe-$(lsb_release -rs) || echo -e "${GREEN} HWE 安装跳过或已是最新 ${NC}"
+        else
+            echo -e "${GREEN} HWE 内核安装跳过 ${NC}"
+        fi
     else
         echo -e "\n${GREEN} 内核已是最新 ${NC}"
     fi
